@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Configure axios defaults
 const api = axios.create({
-  timeout: 30000, // 30 seconds timeout
+  timeout: 60000, // Increased timeout for image processing
   headers: {
     "Content-Type": "application/json",
   },
@@ -13,12 +13,49 @@ const API_ENDPOINT =
   process.env.NEXT_PUBLIC_DIAGNOSIS_API_URL || "/api/diagnosis";
 
 /**
- * Submit diagnosis data to AI service
+ * Convert image file to base64
+ * @param {File} file - The image file to convert
+ * @returns {Promise<string>} - Base64 encoded image
+ */
+const convertImageToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      // Remove the data URL prefix (data:image/...;base64,)
+      const base64 = reader.result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+/**
+ * Submit diagnosis data to AI service with enhanced image processing
  * @param {Object} formData - The form data containing patient information
  * @returns {Promise<Object>} - The diagnosis result
  */
 export const submitDiagnosisData = async (formData) => {
   try {
+    // Process medical image if provided
+    let processedImageData = null;
+    if (formData.medicalImages) {
+      try {
+        const base64Image = await convertImageToBase64(formData.medicalImages);
+        processedImageData = {
+          name: formData.medicalImages.name,
+          size: formData.medicalImages.size,
+          type: formData.medicalImages.type,
+          base64: base64Image,
+        };
+      } catch (imageError) {
+        console.error("Image processing error:", imageError);
+        throw new Error(
+          "Failed to process the uploaded image. Please try with a different image."
+        );
+      }
+    }
+
     // Format the data for the API
     const requestData = {
       patient: {
@@ -35,13 +72,7 @@ export const submitDiagnosisData = async (formData) => {
         lumpStiff: formData.lumpStiff,
         symptoms: formData.symptoms || "",
       },
-      medicalImage: formData.medicalImages
-        ? {
-            name: formData.medicalImages.name,
-            size: formData.medicalImages.size,
-            type: formData.medicalImages.type,
-          }
-        : null,
+      medicalImage: processedImageData,
       timestamp: new Date().toISOString(),
     };
 
@@ -59,6 +90,17 @@ export const submitDiagnosisData = async (formData) => {
     if (error.response) {
       // Server responded with error status
       const message = error.response.data?.message || "Server error occurred";
+      const errorData = error.response.data;
+
+      // Handle specific image validation errors
+      if (errorData?.error === "INVALID_IMAGE") {
+        const imageError = new Error(errorData.message);
+        imageError.type = "INVALID_IMAGE";
+        imageError.suggestions = errorData.suggestions;
+        imageError.imageType = errorData.imageType;
+        throw imageError;
+      }
+
       throw new Error(`API Error: ${message}`);
     } else if (error.request) {
       // Request was made but no response received
@@ -66,7 +108,7 @@ export const submitDiagnosisData = async (formData) => {
         "Network error: Unable to connect to the diagnosis service"
       );
     } else {
-      // Something else happened
+      // Something else happened (including image processing errors)
       throw new Error(error.message || "An unexpected error occurred");
     }
   }

@@ -38,11 +38,42 @@ The application will be available at `http://localhost:3000`
 ## Features
 
 - **Comprehensive Form**: Collects patient information and symptoms
-- **ChatGPT Integration**: Uses GPT-4 for medical assessment
+- **ChatGPT Integration**: Uses GPT-4 Vision for medical assessment
+- **Smart Image Validation**: AI automatically validates uploaded medical images
 - **Risk Assessment**: Provides Low/Medium/High risk categorization
 - **Detailed Recommendations**: Offers specific medical guidance
-- **Medical Image Support**: Includes image upload capability
+- **Medical Image Support**: Enhanced analysis with vision-capable AI
 - **Professional Disclaimer**: Emphasizes the need for medical consultation
+
+## Enhanced AI Image Analysis
+
+### Smart Image Detection
+
+The application now includes GPT-4 Vision integration that:
+
+- **Automatically validates** uploaded images for medical relevance
+- **Rejects inappropriate images** (personal photos, selfies, non-medical content)
+- **Accepts medical imaging** (mammograms, ultrasounds, MRI scans, clinical photos)
+- **Provides specific feedback** when images are invalid
+- **Enhances diagnosis accuracy** by combining visual and symptom analysis
+
+### Supported Medical Images
+
+✅ **Accepted:**
+
+- Mammogram images
+- Breast ultrasound scans
+- MRI breast imaging
+- Clinical examination photos
+- Medical reports with relevant imaging
+
+❌ **Automatically Rejected:**
+
+- Personal photographs
+- Selfies or casual photos
+- Non-medical images
+- Images of other body parts
+- Screenshots or random content
 
 ## API Integration Details
 
