@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 
 const FileUpload = ({
   label,
@@ -11,6 +11,7 @@ const FileUpload = ({
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -42,18 +43,30 @@ const FileUpload = ({
   };
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
+    console.log('handleFileChange called with:', e.target.files);
+    if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      console.log('Setting uploaded file:', file.name);
       setUploadedFile(file);
+      
+      // Ensure the form knows about the file change
+      const registerProps = register(name);
+      if (registerProps.onChange) {
+        registerProps.onChange(e);
+      }
     }
   };
 
   const removeFile = () => {
     setUploadedFile(null);
-    // Clear the file input
-    const fileInput = document.getElementById(name);
-    if (fileInput) {
-      fileInput.value = "";
+    // Clear the file input properly using ref
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      // Trigger form update for removal
+      const registerProps = register(name);
+      if (registerProps.onChange) {
+        registerProps.onChange({ target: { name, files: null } });
+      }
     }
   };
 
@@ -160,16 +173,32 @@ const FileUpload = ({
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          onClick={() => document.getElementById(name).click()}
+          onClick={(e) => {
+            // Prevent double-triggering by checking if click is on the input itself
+            if (e.target.type !== 'file') {
+              e.preventDefault();
+              e.stopPropagation();
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }
+          }}
         >
           <input
+            ref={fileInputRef}
             id={name}
             type="file"
             accept={accept}
             {...register(name)}
             onChange={(e) => {
-              register(name).onChange(e);
-              handleFileChange(e);
+              console.log('File input onChange triggered:', e.target.files);
+              // Stop propagation to prevent bubbling
+              e.stopPropagation();
+              
+              // Process the file selection
+              if (e.target.files && e.target.files.length > 0) {
+                handleFileChange(e);
+              }
             }}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
